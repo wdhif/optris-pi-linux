@@ -27,10 +27,11 @@
  */
 #include "Obvious2D.h"
 
-#define API_PATH "http://localhost:3000/api/points"
+#define API_PATH "http://10.31.16.130:3000/api/points"
 
 using namespace std;
 using namespace optris;
+using namespace cpr;
 
 IRImager *_imager = NULL;
 ImageBuilder _iBuilder;
@@ -184,18 +185,18 @@ void cbManualFlag() {
 }
 
 void sendData(string type, float value) {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    auto t = time(nullptr);
+    auto tm = *localtime(&t);
 
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+    ostringstream oss;
+    oss << put_time(&tm, "%d/%m/%Y %H:%M:%S");
     auto date = oss.str();
 
-    cpr::PostAsync(
-        cpr::Url{API_PATH},
-        cpr::Parameters{
+    GetAsync(
+        Url{API_PATH},
+        Parameters{
             {"type", type},
-            {"value", value},
+            {"value", to_string(value)},
             {"date", date},
         }
     );
