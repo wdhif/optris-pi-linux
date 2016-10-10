@@ -1,0 +1,29 @@
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Optris Imager Server - Smalt Création</title>
+</head>
+
+<body>
+  {{> index}}
+</body>
+
+<template name="index">
+  <div class="container">
+    <canvas id="chart"></canvas>
+    <br>
+    <div class="center-block">
+      <dl class="dl-horizontal">
+        <dt>Last maximum</dt>
+        <dd>{{last 'max'}} °C</dd>
+
+        <dt>Last average</dt>
+        <dd>{{last 'avg'}} °C</dd>
+
+        <dt>Last minimum</dt>
+        <dd>{{last 'min'}} °C</dd>
+      </dl>
+    </div>
+  </div>
+</template>
