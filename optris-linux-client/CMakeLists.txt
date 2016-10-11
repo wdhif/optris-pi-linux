@@ -12,5 +12,5 @@ LINK_DIRECTORIES(/usr/lib)
 
 LINK_LIBRARIES(irimager irimageprocessing ircore udev GL GLU glut pthread ${CPR_LIBRARIES})
 
-ADD_EXECUTABLE(irimager_show Obvious2D.cpp irimagerShow.cpp)
+ADD_EXECUTABLE(optris-pi-client Obvious2D.cpp optris-pi-client.cpp)
 

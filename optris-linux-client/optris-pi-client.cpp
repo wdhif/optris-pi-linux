@@ -10,6 +10,8 @@
 
 #include <ctime>
 #include <sstream>
+#include <chrono>
+
 #include <cpr/cpr.h>
 
 /**
@@ -27,11 +29,10 @@
  */
 #include "Obvious2D.h"
 
-#define API_PATH "http://10.31.16.130:3000/api/points"
-
 using namespace std;
 using namespace optris;
 using namespace cpr;
+using namespace chrono;
 
 IRImager *_imager = NULL;
 ImageBuilder _iBuilder;
@@ -45,6 +46,7 @@ bool _showFPS = true;
 struct thread_context {
     pthread_mutex_t mutex;
     pthread_cond_t available;
+    string api_endpoint;
 };
 
 bool _shutdown = false;
@@ -184,7 +186,7 @@ void cbManualFlag() {
     _imager->forceFlagEvent();
 }
 
-void sendData(string type, float value) {
+void sendData(string type, float value, string api_endpoint) {
     auto t = time(nullptr);
     auto tm = *localtime(&t);
 
@@ -193,7 +195,7 @@ void sendData(string type, float value) {
     auto date = oss.str();
 
     GetAsync(
-        Url{API_PATH},
+        Url{api_endpoint},
         Parameters{
             {"type", type},
             {"value", to_string(value)},
@@ -204,6 +206,7 @@ void sendData(string type, float value) {
 
 void *displayWorker(void *arg) {
     thread_context *context = (thread_context *) arg;
+    string api_endpoint = context->api_endpoint;
     int w = _w;
     int h = _h;
     if (w < 320 && h < 240) {
@@ -229,6 +232,7 @@ void *displayWorker(void *arg) {
 
     unsigned char *bufferThermal = NULL;
     unsigned char *bufferVisible = NULL;
+    seconds lastSentAt = duration_cast<seconds>(system_clock::now().time_since_epoch());
 
     while (viewer.isAlive() && !_shutdown) {
         pthread_mutex_lock(&(context->mutex));
@@ -277,11 +281,16 @@ void *displayWorker(void *arg) {
 
             viewer.draw(bufferThermal, _iBuilder.getStride(), _h, 3);
 
-//            cout << "Temp: min = " << minRegion.t << " ; avg = " << mean << " ; max = " << maxRegion.t << endl;
+            seconds now = duration_cast<seconds>(system_clock::now().time_since_epoch());
 
-            sendData("min", minRegion.t);
-            sendData("avg", mean);
-            sendData("max", maxRegion.t);
+            if (now - seconds(1) > lastSentAt) {
+                //cout << "Temp: min = " << minRegion.t << " ; avg = " << mean << " ; max = " << maxRegion.t << endl;
+                lastSentAt = duration_cast<seconds>(system_clock::now().time_since_epoch());
+
+                sendData("min", minRegion.t, api_endpoint);
+                sendData("avg", mean, api_endpoint);
+                sendData("max", maxRegion.t, api_endpoint);
+            }
         }
     }
 
@@ -301,8 +310,8 @@ int main(int argc, char *argv[]) {
     cout << std::fixed;
     cout << std::setprecision(2);
 
-    if (argc != 2) {
-        cout << "usage: " << argv[0] << " <xml configuration file>" << endl;
+    if (argc != 3) {
+        cout << "usage: " << argv[0] << " <xml configuration file> <api endpoint url eg. http://server/api>" << endl;
         return -1;
     }
 
@@ -342,7 +351,7 @@ int main(int argc, char *argv[]) {
     }
 
     pthread_t th;
-    thread_context context = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER};
+    thread_context context = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, argv[2]};
     pthread_create(&th, NULL, displayWorker, &context);
 
     /**
